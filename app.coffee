@@ -27,12 +27,12 @@ slack = (method, role, payload, callback) ->
     .send(payload)
     .end (err, result) ->
       if err
-        callback(err, null)
+        callback?(err, null)
       else
         if result.body.ok
-          callback(null, result.body)
+          callback?(null, result.body)
         else
-          callback(result.body.error, null)
+          callback?(result.body.error, null)
 
 findOrCreateGroup = (number, name, callback) ->
   slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
