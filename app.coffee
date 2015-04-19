@@ -6,6 +6,7 @@ redis_port = process.env["REDIS_PORT_6379_TCP_PORT"] || 6379
 redis_host = process.env["REDIS_PORT_6379_TCP_ADDR"] || '127.0.0.1'
 
 slack_bot = process.env["SLACK_BOT"]
+slack_user = process.env["SLACK_USER"]
 slack_bot_token = process.env["SLACK_BOT_TOKEN"]
 slack_user_token = process.env["SLACK_USER_TOKEN"]
 
@@ -66,7 +67,7 @@ slack "rtm.start", "bot", {}, (err, result) ->
   ws.on 'message', (message) ->
     {type, channel, user, text} = JSON.parse(message)
 
-    return unless type == "message" && user != slack_bot
+    return unless type == "message" && user == slack_user
 
     slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
       for group in result.groups when group.id == channel
