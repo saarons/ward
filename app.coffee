@@ -12,6 +12,8 @@ slack_user_token = process.env["SLACK_USER_TOKEN"]
 endpoint = process.env["ENDPOINT"]
 endpoint_key = process.env["ENDPOINT_KEY"]
 
+user_slug = process.env["USER_SLUG"]
+
 slack = (method, role, payload, callback) ->
   token = if role == "bot"
     slack_bot_token
@@ -72,5 +74,5 @@ slack "rtm.start", "bot", {}, (err, result) ->
           .post(endpoint)
           .set('Accept', 'application/json')
           .set('X-XMPP-Key', endpoint_key)
-          .send(to: group.purpose.value, text: text)
+          .send(to: group.purpose.value, text: text, user: user_slug)
           .end()
