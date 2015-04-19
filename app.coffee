@@ -15,6 +15,8 @@ endpoint_key = process.env["ENDPOINT_KEY"]
 
 user_slug = process.env["USER_SLUG"]
 
+bitly_token = process.env["BITLY_TOKEN"]
+
 slack = (method, role, payload, callback) ->
   token = if role == "bot"
     slack_bot_token
@@ -52,10 +54,14 @@ processIncomingMessage = (message, contact) ->
   name = contact?[0] || message.from.substring(1)
   photo = contact?[2] || "http://lorempixel.com/48/48/"
 
-  findOrCreateGroup message.from, name, (err, group_id) ->
-    options = {channel: group_id, text: message.text, username: name, icon_url: photo}
-    console.dir(options)
-    slack "chat.postMessage", "bot", options
+  request
+    .get('https://api-ssl.bitly.com/v3/shorten')
+    .query(access_token: bitly_token, longUrl: photo)
+    .end (err, result) ->
+      findOrCreateGroup message.from, name, (err, group_id) ->
+        options = {channel: group_id, text: message.text, username: name, icon_url: result.body.data.url}
+        console.dir(options)
+        slack "chat.postMessage", "bot", options
 
 consumer = redis.createClient(redis_port, redis_host)
 consumer.on 'message', (channel, message) ->
