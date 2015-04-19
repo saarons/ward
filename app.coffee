@@ -53,11 +53,14 @@ processIncomingMessage = (message, contact) ->
   photo = contact?[2] || "http://lorempixel.com/48/48/"
 
   findOrCreateGroup message.from, name, (err, group_id) ->
-    slack "chat.postMessage", "bot", {channel: group_id, text: message.text, username: name, icon_url: photo}
+    options = {channel: group_id, text: message.text, username: name, icon_url: photo}
+    console.dir(options)
+    slack "chat.postMessage", "bot", options
 
 consumer = redis.createClient(redis_port, redis_host)
 consumer.on 'message', (channel, message) ->
   {message, contact} = JSON.parse(message)
+  console.dir({message, contact})
   processIncomingMessage(message, contact)
 
 consumer.subscribe('messages')
