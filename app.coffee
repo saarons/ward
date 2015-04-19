@@ -48,10 +48,10 @@ findOrCreateGroup = (number, name, callback) ->
           callback(null, group_id)
 
 processIncomingMessage = (message, contact) ->
-  name = contact?[0] || message.to.substring(1)
+  name = contact?[0] || message.from.substring(1)
   photo = contact?[2] || "http://lorempixel.com/48/48/"
 
-  findOrCreateGroup message.to, name, (err, group_id) ->
+  findOrCreateGroup message.from, name, (err, group_id) ->
     slack "chat.postMessage", "bot", {channel: group_id, text: message.text, username: name, icon_url: photo}
 
 consumer = redis.createClient(redis_port, redis_host)
