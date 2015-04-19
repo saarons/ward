@@ -1,0 +1,16 @@
+{
+  "name": "ward",
+  "version": "0.0.1",
+  "description": "A bridge between Abbott and Slack",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "redis": "0.12.1",
+    "superagent": "1.2.0",
+    "coffee-script": "1.9.2"
+  },
+  "author": "Sam Aarons",
+  "license": "MIT"
+}
