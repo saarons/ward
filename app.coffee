@@ -39,8 +39,7 @@ slack = (method, role, payload, callback) ->
 
 findOrCreateGroup = (number, name, callback) ->
   slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
-    for group in result.groups
-      if group.purpose.value == number
+    for group in result.groups when group.purpose.value == number
         return callback(null, group.id)
 
     slack "groups.create", "user", {name}, (err, result) ->
@@ -78,9 +77,14 @@ slack "rtm.start", "bot", {}, (err, result) ->
 
     return unless type == "message" && user == slack_user
 
+    text = text
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+
     slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
       for group in result.groups when group.id == channel
-        request
+        return request
           .post(endpoint)
           .set('Accept', 'application/json')
           .set('X-XMPP-Key', endpoint_key)
