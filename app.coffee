@@ -61,7 +61,6 @@ processIncomingMessage = (message, contact) ->
         options =
           channel: group_id
           text: message.text
-          parse: 'none'
           username: name
           icon_url: result.body.data.url
         slack "chat.postMessage", "bot", options
