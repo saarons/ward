@@ -58,14 +58,17 @@ processIncomingMessage = (message, contact) ->
     .query(access_token: bitly_token, longUrl: photo)
     .end (err, result) ->
       findOrCreateGroup message.from, name, (err, group_id) ->
-        options = {channel: group_id, text: message.text, username: name, icon_url: result.body.data.url}
-        console.dir(options)
+        options =
+          channel: group_id
+          text: message.text
+          parse: 'none'
+          username: name
+          icon_url: result.body.data.url
         slack "chat.postMessage", "bot", options
 
 consumer = redis.createClient(redis_port, redis_host)
 consumer.on 'message', (channel, message) ->
   {message, contact} = JSON.parse(message)
-  console.dir({message, contact})
   processIncomingMessage(message, contact)
 
 consumer.subscribe('messages')
