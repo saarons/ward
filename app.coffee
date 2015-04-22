@@ -74,6 +74,14 @@ consumer.subscribe('messages')
 
 slack "rtm.start", "bot", {}, (err, result) ->
   ws = new WebSocket(result.url)
+
+  ws.on 'error', (error) ->
+    console.dir(error)
+
+  ws.on 'close', (code, message) ->
+    console.dir({code, message})
+    process.exit(1)
+
   ws.on 'message', (message) ->
     {type, channel, user, text} = JSON.parse(message)
 
