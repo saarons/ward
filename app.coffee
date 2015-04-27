@@ -7,7 +7,6 @@ logger = new winston.Logger
   transports: [
     new winston.transports.Console
       level: process.env["LOG_LEVEL"] || 'info'
-      colorize: true
       prettyPrint: true
   ]
 
@@ -88,16 +87,18 @@ slack "rtm.start", "bot", {}, (err, result) ->
   ws = new WebSocket(result.url)
 
   ws.on 'error', (error) ->
-    console.dir(error)
+    logger.log('error', 'WebSocket error', error)
 
   ws.on 'close', (code, message) ->
-    console.dir({code, message})
+    logger.log('error', 'WebSocket connection closed', {code, message})
     process.exit(1)
 
   ws.on 'message', (message) ->
+    message = JSON.parse(message)
+
     logger.log('debug', 'Received Outbound Message', message)
 
-    {type, subtype, channel, user, text, hidden} = JSON.parse(message)
+    {type, subtype, channel, user, text, hidden} = message
 
     return if hidden || !(type == "message" && user == slack_user && !subtype?)
 
