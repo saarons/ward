@@ -83,9 +83,9 @@ slack "rtm.start", "bot", {}, (err, result) ->
     process.exit(1)
 
   ws.on 'message', (message) ->
-    {type, channel, user, text} = JSON.parse(message)
+    {type, channel, user, text, hidden} = JSON.parse(message)
 
-    return unless type == "message" && user == slack_user
+    return if hidden || !(type == "message" && user == slack_user)
 
     text = text
       .replace(/&amp;/g, "&")
