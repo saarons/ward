@@ -77,7 +77,9 @@ processIncomingMessage = (message, contact) ->
 consumer = redis.createClient(redis_port, redis_host)
 consumer.on 'message', (channel, message) ->
   {message, contact} = JSON.parse(message)
+
   logger.log('debug', 'Received Inbound Message', {message, contact})
+
   processIncomingMessage(message, contact)
 
 consumer.subscribe('messages')
@@ -94,9 +96,10 @@ slack "rtm.start", "bot", {}, (err, result) ->
 
   ws.on 'message', (message) ->
     logger.log('debug', 'Received Outbound Message', message)
-    {type, channel, user, text, hidden} = JSON.parse(message)
 
-    return if hidden || !(type == "message" && user == slack_user)
+    {type, subtype, channel, user, text, hidden} = JSON.parse(message)
+
+    return if hidden || !(type == "message" && user == slack_user && !subtype?)
 
     text = text
       .replace(/&amp;/g, "&")
@@ -105,9 +108,13 @@ slack "rtm.start", "bot", {}, (err, result) ->
 
     slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
       for group in result.groups when group.id == channel
+        to = group.purpose.value
+
+        logger.log('debug', 'Sent Message', {to, text})
+
         return request
           .post(endpoint)
           .set('Accept', 'application/json')
           .set('X-XMPP-Key', endpoint_key)
-          .send(to: group.purpose.value, text: text, user: user_slug)
+          .send({to, text, user: user_slug})
           .end()
