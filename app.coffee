@@ -1,6 +1,15 @@
 redis = require('redis')
 WebSocket = require('ws')
+winston = require('winston')
 request = require('superagent')
+
+logger = new winston.Logger
+  transports: [
+    new winston.transports.Console
+      level: process.env["LOG_LEVEL"] || 'info'
+      colorize: true
+      prettyPrint: true
+  ]
 
 redis_port = process.env["REDIS_PORT_6379_TCP_PORT"] || 6379
 redis_host = process.env["REDIS_PORT_6379_TCP_ADDR"] || '127.0.0.1'
@@ -68,6 +77,7 @@ processIncomingMessage = (message, contact) ->
 consumer = redis.createClient(redis_port, redis_host)
 consumer.on 'message', (channel, message) ->
   {message, contact} = JSON.parse(message)
+  logger.log('debug', 'Received Inbound Message', {message, contact})
   processIncomingMessage(message, contact)
 
 consumer.subscribe('messages')
@@ -83,6 +93,7 @@ slack "rtm.start", "bot", {}, (err, result) ->
     process.exit(1)
 
   ws.on 'message', (message) ->
+    logger.log('debug', 'Received Outbound Message', message)
     {type, channel, user, text, hidden} = JSON.parse(message)
 
     return if hidden || !(type == "message" && user == slack_user)
