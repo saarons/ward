@@ -1,6 +1,7 @@
 redis = require('redis')
 WebSocket = require('ws')
 winston = require('winston')
+emojione = require('emojione')
 request = require('superagent')
 
 logger = new winston.Logger
@@ -106,6 +107,8 @@ slack "rtm.start", "bot", {}, (err, result) ->
       .replace(/&amp;/g, "&")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
+
+    text = emojione.unifyUnicode(text)
 
     slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
       for group in result.groups when group.id == channel
