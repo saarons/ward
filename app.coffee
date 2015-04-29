@@ -99,9 +99,9 @@ slack "rtm.start", "bot", {}, (err, result) ->
 
     logger.log('debug', 'Received Outbound Message', message)
 
-    {type, subtype, channel, user, text, hidden} = message
+    {type, subtype, channel, user, text} = message
 
-    return if hidden || !(type == "message" && user == slack_user && !subtype?)
+    return unless type == "message" && user == slack_user && !subtype?
 
     text = text
       .replace(/&amp;/g, "&")
