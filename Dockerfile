@@ -1,2 +1,4 @@
-FROM node:0.10-onbuild
+FROM iojs:onbuild
+RUN mkdir /ssl
+VOLUME /ssl
 MAINTAINER Sam Aarons <samaarons@gmail.com>

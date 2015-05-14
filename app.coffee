@@ -1,8 +1,10 @@
-redis = require('redis')
+fs = require('fs')
+https = require('https')
 WebSocket = require('ws')
 winston = require('winston')
 emojione = require('emojione')
 request = require('superagent')
+Pusher = require('pusher-client')
 
 logger = new winston.Logger
   transports: [
@@ -11,26 +13,38 @@ logger = new winston.Logger
       prettyPrint: true
   ]
 
-redis_port = process.env["REDIS_PORT_6379_TCP_PORT"] || 6379
-redis_host = process.env["REDIS_PORT_6379_TCP_ADDR"] || '127.0.0.1'
+BITLY_TOKEN = process.env["BITLY_TOKEN"]
 
-slack_bot = process.env["SLACK_BOT"]
-slack_user = process.env["SLACK_USER"]
-slack_bot_token = process.env["SLACK_BOT_TOKEN"]
-slack_user_token = process.env["SLACK_USER_TOKEN"]
+SLACK_BOT = process.env["SLACK_BOT"]
+SLACK_USER = process.env["SLACK_USER"]
+SLACK_BOT_TOKEN = process.env["SLACK_BOT_TOKEN"]
+SLACK_USER_TOKEN = process.env["SLACK_USER_TOKEN"]
 
-endpoint = process.env["ENDPOINT"]
-endpoint_key = process.env["ENDPOINT_KEY"]
+USER_SLUG = process.env["USER_SLUG"]
+USER_NUMBER = process.env["USER_NUMBER"]
+USER_PHOTO_TOKEN = process.env["USER_PHOTO_TOKEN"]
 
-user_slug = process.env["USER_SLUG"]
+SSL_KEY = fs.readFileSync(process.env["SSL_KEY"] || '/ssl/client.key')
+SSL_CERT = fs.readFileSync(process.env["SSL_CERT"] || '/ssl/client.pem')
 
-bitly_token = process.env["BITLY_TOKEN"]
+abbott_options =
+  hostname: 'api.abbott.io'
+  port: 443
+  path: '/v1/messages'
+  method: 'POST'
+  key: SSL_KEY
+  cert: SSL_CERT
+  headers:
+    'Accept': 'application/json'
+    'Content-Type': 'application/json'
+
+abbott_options.agent = new https.Agent(abbott_options)
 
 slack = (method, role, payload, callback) ->
   token = if role == "bot"
-    slack_bot_token
+    SLACK_BOT_TOKEN
   else if role == "user"
-    slack_user_token
+    SLACK_USER_TOKEN
 
   request
     .post("https://slack.com/api/#{method}")
@@ -49,40 +63,47 @@ slack = (method, role, payload, callback) ->
 findOrCreateGroup = (number, name, callback) ->
   slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
     for group in result.groups when group.purpose.value == number
-        return callback(null, group.id)
+      return callback(null, group.id)
 
     slack "groups.create", "user", {name}, (err, result) ->
       group_id = result.group.id
 
       slack "groups.setPurpose", "user", {channel: group_id, purpose: number}, (err, result) ->
-        slack "groups.invite", "user", {channel: group_id, user: slack_bot}, (err, result) ->
+        slack "groups.invite", "user", {channel: group_id, user: SLACK_BOT}, (err, result) ->
           callback(null, group_id)
 
-processIncomingMessage = (message, contact) ->
-  name = contact?[0] || message.from.substring(1)
-  photo = contact?[2] || "http://lorempixel.com/48/48/"
+processIncomingMessage = (payload) ->
+  from = payload.feedable.from
+  text = payload.feedable.text
+  slug = payload.contact.external_slug
+  name = payload.contact.external?.google?.name || from
+
+  photo_url = "https://api.abbott.io/v1/contacts/#{slug}/photo?token=#{USER_PHOTO_TOKEN}"
 
   request
     .get('https://api-ssl.bitly.com/v3/shorten')
-    .query(access_token: bitly_token, longUrl: photo)
+    .query(access_token: BITLY_TOKEN, longUrl: photo_url)
     .end (err, result) ->
-      findOrCreateGroup message.from, name, (err, group_id) ->
+      findOrCreateGroup from, name, (err, group_id) ->
         options =
           channel: group_id
-          text: message.text
+          text: text
           username: name
           icon_url: result.body.data.url
         slack "chat.postMessage", "bot", options
 
-consumer = redis.createClient(redis_port, redis_host)
-consumer.on 'message', (channel, message) ->
-  {message, contact} = JSON.parse(message)
+socket = new Pusher '42d6b0407dc69bdaf0b7',
+  auth:
+    agent:
+      key: SSL_KEY
+      cert: SSL_CERT
+  authEndpoint: "https://api.abbott.io/v1/feed/subscribe"
+  encrypted: true
 
-  logger.log('debug', 'Received Inbound Message', {message, contact})
-
-  processIncomingMessage(message, contact)
-
-consumer.subscribe('messages')
+channel = socket.subscribe "private-#{USER_SLUG}"
+channel.bind 'messages', (data) ->
+  logger.log('debug', 'Received Inbound Message', data)
+  processIncomingMessage(data)
 
 slack "rtm.start", "bot", {}, (err, result) ->
   ws = new WebSocket(result.url)
@@ -101,24 +122,24 @@ slack "rtm.start", "bot", {}, (err, result) ->
 
     {type, subtype, channel, user, text} = message
 
-    return unless type == "message" && user == slack_user && !subtype?
+    return unless type == "message" && user == SLACK_USER && !subtype?
 
     text = text
-      .replace(/&amp;/g, "&")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&")
 
     text = emojione.unifyUnicode(text)
 
     slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
       for group in result.groups when group.id == channel
         to = group.purpose.value
+        payload = {to, text, from: USER_NUMBER}
 
-        logger.log('debug', 'Sent Message', {to, text})
+        logger.log('debug', 'Sent Message', payload)
 
-        return request
-          .post(endpoint)
-          .set('Accept', 'application/json')
-          .set('X-XMPP-Key', endpoint_key)
-          .send({to, text, user: user_slug})
-          .end()
+        req = https.request(abbott_options)
+        req.write(JSON.stringify(payload))
+        req.end()
+
+        return
