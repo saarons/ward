@@ -92,6 +92,37 @@ processIncomingMessage = (payload) ->
           icon_url: result.body.data.url
         slack "chat.postMessage", "bot", options
 
+processIncomingVoicemail = (payload) ->
+  from = payload.feedable.from
+  text = payload.feedable.text
+  url = payload.feedable.voicemail
+  slug = payload.contact.external_slug
+  name = payload.contact.external?.google?.name || from
+
+  photo_url = "https://api.abbott.io/v1/contacts/#{slug}/photo?token=#{USER_PHOTO_TOKEN}"
+
+  request
+    .get('https://api-ssl.bitly.com/v3/shorten')
+    .query(access_token: BITLY_TOKEN, longUrl: photo_url)
+    .end (err, result) ->
+      findOrCreateGroup from, name, (err, group_id) ->
+        attachments = JSON.stringify(
+          [
+            fallback: text
+            text: text
+            title: "Voicemail"
+            title_link: url,
+            pretext: "New voicemail from #{name}"
+          ])
+
+        options =
+          channel: group_id
+          username: name
+          icon_url: result.body.data.url
+          attachments: attachments
+
+        slack "chat.postMessage", "bot", options
+
 socket = new Pusher '42d6b0407dc69bdaf0b7',
   auth:
     agent:
@@ -101,9 +132,14 @@ socket = new Pusher '42d6b0407dc69bdaf0b7',
   encrypted: true
 
 channel = socket.subscribe "private-#{USER_SLUG}"
+
 channel.bind 'messages', (data) ->
   logger.log('debug', 'Received Inbound Message', data)
   processIncomingMessage(data)
+
+channel.bind 'voicemails', (data) ->
+  logger.log('debug', 'Received Inbound Voicemail', data)
+  processIncomingVoicemail(data)
 
 slack "rtm.start", "bot", {}, (err, result) ->
   ws = new WebSocket(result.url)
