@@ -1,5 +1,3 @@
-fs = require('fs')
-https = require('https')
 WebSocket = require('ws')
 winston = require('winston')
 emojione = require('emojione')
@@ -24,18 +22,6 @@ USER_SLUG = process.env["USER_SLUG"]
 USER_NUMBER = process.env["USER_NUMBER"]
 USER_TOKEN = process.env["USER_TOKEN"]
 USER_PHOTO_TOKEN = process.env["USER_PHOTO_TOKEN"]
-
-abbott_options =
-  hostname: 'api.abbott.io'
-  port: 443
-  path: '/v1/messages'
-  method: 'POST'
-  headers:
-    'Accept': 'application/json'
-    'Content-Type': 'application/json'
-    'Authorization': "Bearer #{USER_TOKEN}"
-
-abbott_options.agent = new https.Agent(abbott_options)
 
 slack = (method, role, payload, callback) ->
   token = if role == "bot"
@@ -123,7 +109,7 @@ processIncomingVoicemail = (payload) ->
 socket = new Pusher '42d6b0407dc69bdaf0b7',
   auth:
     headers:
-      'Authorization': abbott_options.headers['Authorization']
+      'Authorization': "Bearer #{USER_TOKEN}"
   authEndpoint: "https://api.abbott.io/v1/feed/subscribe"
   encrypted: true
 
@@ -170,8 +156,10 @@ slack "rtm.start", "bot", {}, (err, result) ->
 
         logger.log('debug', 'Sent Message', payload)
 
-        req = https.request(abbott_options)
-        req.write(JSON.stringify(payload))
-        req.end()
+        request
+          .post('https://api.abbott.io/v1/messages')
+          .set('Authorization', "Bearer #{USER_TOKEN}")
+          .send(payload)
+          .end()
 
         return
