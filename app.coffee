@@ -158,6 +158,7 @@ slack "rtm.start", "bot", {}, (err, result) ->
 
         request
           .post('https://api.abbott.io/v1/messages')
+          .set('Accept', 'application/json')
           .set('Authorization', "Bearer #{USER_TOKEN}")
           .send(payload)
           .end()
