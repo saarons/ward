@@ -22,21 +22,18 @@ SLACK_USER_TOKEN = process.env["SLACK_USER_TOKEN"]
 
 USER_SLUG = process.env["USER_SLUG"]
 USER_NUMBER = process.env["USER_NUMBER"]
+USER_TOKEN = process.env["USER_TOKEN"]
 USER_PHOTO_TOKEN = process.env["USER_PHOTO_TOKEN"]
-
-SSL_KEY = fs.readFileSync(process.env["SSL_KEY"] || '/ssl/client.key')
-SSL_CERT = fs.readFileSync(process.env["SSL_CERT"] || '/ssl/client.pem')
 
 abbott_options =
   hostname: 'api.abbott.io'
   port: 443
   path: '/v1/messages'
   method: 'POST'
-  key: SSL_KEY
-  cert: SSL_CERT
   headers:
     'Accept': 'application/json'
     'Content-Type': 'application/json'
+    'Authorization': "Bearer #{USER_TOKEN}"
 
 abbott_options.agent = new https.Agent(abbott_options)
 
@@ -125,9 +122,8 @@ processIncomingVoicemail = (payload) ->
 
 socket = new Pusher '42d6b0407dc69bdaf0b7',
   auth:
-    agent:
-      key: SSL_KEY
-      cert: SSL_CERT
+    headers:
+      'Authorization': abbott_options.headers['Authorization']
   authEndpoint: "https://api.abbott.io/v1/feed/subscribe"
   encrypted: true
 

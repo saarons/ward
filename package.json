@@ -8,12 +8,12 @@
   },
   "repository": "saarons/ward",
   "dependencies": {
-    "ws": "0.7.1",
-    "winston": "1.0.0",
-    "emojione": "1.4.0",
-    "superagent": "1.2.0",
-    "coffee-script": "1.9.2",
-    "pusher-client": "saarons/pusher-client-node"
+    "ws": "^0.7.1",
+    "winston": "^1.0.0",
+    "emojione": "^1.4.0",
+    "superagent": "^1.2.0",
+    "coffee-script": "^1.9.2",
+    "pusher-client": "^0.2.3"
   },
   "author": "Sam Aarons",
   "license": "MIT"
