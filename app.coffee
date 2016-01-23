@@ -7,8 +7,8 @@ Pusher = require('pusher-client')
 logger = new winston.Logger
   transports: [
     new winston.transports.Console
-      level: process.env["LOG_LEVEL"] || 'info'
       prettyPrint: true
+      level: process.env["LOG_LEVEL"]
   ]
 
 BITLY_TOKEN = process.env["BITLY_TOKEN"]
@@ -113,15 +113,38 @@ socket = new Pusher '42d6b0407dc69bdaf0b7',
   authEndpoint: "https://api.abbott.io/v1/feed/subscribe"
   encrypted: true
 
+getFeed = (id, callback) ->
+  request
+    .get("https://api.abbott.io/v1/feed/#{id}")
+    .set('Accept', 'application/json')
+    .set('Authorization', "Bearer #{USER_TOKEN}")
+    .end (err, result) ->
+      if err
+        callback(err)
+      else
+        logger.log('debug', 'From Server', result.body)
+
+        callback(null, result.body)
+
 channel = socket.subscribe "private-#{USER_SLUG}"
 
 channel.bind 'messages', (data) ->
   logger.log('debug', 'Received Inbound Message', data)
-  processIncomingMessage(data)
+
+  getFeed data.id, (err, data) ->
+    if err
+      logger.log('error', 'Feed Retrieval Error', err)
+    else
+      processIncomingMessage(data)
 
 channel.bind 'voicemails', (data) ->
   logger.log('debug', 'Received Inbound Voicemail', data)
-  processIncomingVoicemail(data)
+
+  getFeed data.id, (err, data) ->
+    if err
+      logger.log('error', 'Feed Retrieval Error', err)
+    else
+      processIncomingVoicemail(data)
 
 slack "rtm.start", "bot", {}, (err, result) ->
   ws = new WebSocket(result.url)
