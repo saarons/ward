@@ -197,12 +197,12 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 app.post '/calls', (req, res) ->
   if req.body.token == SLACK_TOKEN && req.body.user_id == SLACK_USER
-    slack "channels.info", "bot", {channel: req.body.channel_id}, (err, result) ->
+    slack "channels.info", "user", {channel: req.body.channel_id}, (err, result) ->
       request
         .post('https://api.abbott.io/v1/calls')
         .set('Accept', 'application/json')
         .set('Authorization', "Bearer #{USER_TOKEN}")
-        .send({to: result.channel.purpose})
+        .send({to: result.channel.purpose.value})
         .end()
 
   res.status(200).end()
