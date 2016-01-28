@@ -39,11 +39,15 @@ slack = (method, role, payload, callback) ->
     .send(payload)
     .end (err, result) ->
       if err
+        logger.log('error', 'Slack error', err)
+
         callback?(err, null)
       else
         if result.body.ok
           callback?(null, result.body)
         else
+          logger.log('error', 'Slack error', result.body.error)
+
           callback?(result.body.error, null)
 
 findOrCreateGroup = (number, name, callback) ->
@@ -123,6 +127,8 @@ getFeed = (id, callback) ->
     .set('Authorization', "Bearer #{USER_TOKEN}")
     .end (err, result) ->
       if err
+        logger.log('error', 'Feed Retrieval Error', err)
+
         callback(err)
       else
         logger.log('debug', 'From Server', result.body)
@@ -135,18 +141,14 @@ channel.bind 'messages', (data) ->
   logger.log('debug', 'Received Inbound Message', data)
 
   getFeed data.id, (err, data) ->
-    if err
-      logger.log('error', 'Feed Retrieval Error', err)
-    else
+    if !err
       processIncomingMessage(data)
 
 channel.bind 'voicemails', (data) ->
   logger.log('debug', 'Received Inbound Voicemail', data)
 
   getFeed data.id, (err, data) ->
-    if err
-      logger.log('error', 'Feed Retrieval Error', err)
-    else
+    if !err
       processIncomingVoicemail(data)
 
 slack "rtm.start", "bot", {}, (err, result) ->
@@ -198,12 +200,13 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.post '/calls', (req, res) ->
   if req.body.token == SLACK_TOKEN && req.body.user_id == SLACK_USER
     slack "channels.info", "user", {channel: req.body.channel_id}, (err, result) ->
-      request
-        .post('https://api.abbott.io/v1/calls')
-        .set('Accept', 'application/json')
-        .set('Authorization', "Bearer #{USER_TOKEN}")
-        .send({to: result.channel.purpose.value})
-        .end()
+      if !err
+        request
+          .post('https://api.abbott.io/v1/calls')
+          .set('Accept', 'application/json')
+          .set('Authorization', "Bearer #{USER_TOKEN}")
+          .send({to: result.channel.purpose.value})
+          .end()
 
   res.status(200).end()
 
