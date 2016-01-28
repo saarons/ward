@@ -196,8 +196,8 @@ app = express()
 app.use(bodyParser.urlencoded({ extended: false }))
 
 app.post '/calls', (req, res) ->
-  if res.body.token == SLACK_TOKEN && res.body.user_id == SLACK_USER
-    slack "channels.info", "bot", {channel: res.body.channel_id}, (err, result) ->
+  if req.body.token == SLACK_TOKEN && req.body.user_id == SLACK_USER
+    slack "channels.info", "bot", {channel: req.body.channel_id}, (err, result) ->
       request
         .post('https://api.abbott.io/v1/calls')
         .set('Accept', 'application/json')
