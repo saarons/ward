@@ -201,7 +201,7 @@ app.post '/calls', (req, res) ->
   logger.log('debug', 'Received Call Request', req.body)
 
   if req.body.token == SLACK_TOKEN && req.body.user_id == SLACK_USER
-    slack "channels.info", "user", {channel: req.body.channel_id}, (err, result) ->
+    slack "groups.info", "user", {channel: req.body.channel_id}, (err, result) ->
       if !err
         request
           .post('https://api.abbott.io/v1/calls')
