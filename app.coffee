@@ -1,8 +1,10 @@
 WebSocket = require('ws')
 winston = require('winston')
+express = require('express')
 emojione = require('emojione')
 request = require('superagent')
 Pusher = require('pusher-client')
+bodyParser = require('body-parser')
 
 logger = new winston.Logger
   transports: [
@@ -17,6 +19,7 @@ SLACK_BOT = process.env["SLACK_BOT"]
 SLACK_USER = process.env["SLACK_USER"]
 SLACK_BOT_TOKEN = process.env["SLACK_BOT_TOKEN"]
 SLACK_USER_TOKEN = process.env["SLACK_USER_TOKEN"]
+SLACK_TOKEN = process.env["SLACK_TOKEN"]
 
 USER_SLUG = process.env["USER_SLUG"]
 USER_NUMBER = process.env["USER_NUMBER"]
@@ -187,3 +190,21 @@ slack "rtm.start", "bot", {}, (err, result) ->
           .end()
 
         return
+
+
+app = express()
+app.use(bodyParser.urlencoded({ extended: false }))
+
+app.post '/calls', (req, res) ->
+  if res.body.token == SLACK_TOKEN && res.body.user_id == SLACK_USER
+    slack "channels.info", "bot", {channel: res.body.channel_id}, (err, result) ->
+      request
+        .post('https://api.abbott.io/v1/calls')
+        .set('Accept', 'application/json')
+        .set('Authorization', "Bearer #{USER_TOKEN}")
+        .send({to: result.channel.purpose})
+        .end()
+
+  res.status(200).end()
+
+app.listen(3000)
