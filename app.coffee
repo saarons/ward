@@ -207,7 +207,7 @@ app.post '/calls', (req, res) ->
           .post('https://api.abbott.io/v1/calls')
           .set('Accept', 'application/json')
           .set('Authorization', "Bearer #{USER_TOKEN}")
-          .send({to: result.channel.purpose.value})
+          .send({to: result.group.purpose.value})
           .end()
 
   res.status(200).end()
