@@ -1,10 +1,13 @@
 WebSocket = require('ws')
 winston = require('winston')
 express = require('express')
-emojione = require('emojione')
 request = require('superagent')
 Pusher = require('pusher-client')
 bodyParser = require('body-parser')
+
+emoji = require('js-emoji')
+emoji.init_env()
+emoji.replace_mode = 'unified'
 
 logger = new winston.Logger
   transports: [
@@ -175,7 +178,7 @@ slack "rtm.start", "bot", {}, (err, result) ->
       .replace(/&gt;/g, ">")
       .replace(/&amp;/g, "&")
 
-    text = emojione.unifyUnicode(text)
+    text = emoji.replace_colons(text)
 
     slack "groups.list", "user", {exclude_archived: true}, (err, result) ->
       for group in result.groups when group.id == channel
